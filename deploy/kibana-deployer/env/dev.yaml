@@ -10,6 +10,18 @@ application:
   environment:
     - name: "PORT"
       value: "5601"
+    - name: ELASTICSEARCH_HOSTS
+      value: "https://elasticsearch.dev.platform.mythicalgames.co:9200"
+    - name: SERVER_HOST
+      value: "0.0.0.0"
+    - name: PROJECT_ID
+      value: mycl-platform-dev
+    - name: GOOGLE_APPLICATION_CREDENTIALS
+      value: /secrets/google/credentials.json
+    - name: ELASTICSEARCH_USERNAME
+      value: elastic
+    - name: ELASTICSEARCH_PASSWORD
+      value: x1Gq7l9C7o45YL103OdKK9jw
 
 replicaCount: 1
 
@@ -17,6 +29,20 @@ image:
   repository: gcr.io/mycl-platform-dev/kibana-deployer
   tag: 1.0.0
   pullPolicy: Always
+
+# Extra environment variables to append to this nodeGroup
+# This will be appended to the current 'env:' key. You can use any of the kubernetes env
+# syntax here
+extraEnvs:
+  - name: "NODE_OPTIONS"
+    value: "--max-old-space-size=1800"
+  - name: "elastic_username"
+    value: "elastic"
+  - name: "elastic_password"
+    value: "x1Gq7l9C7o45YL103OdKK9jw"
+
+# Allows you to load environment variables from kubernetes secret or config map
+envFrom: []
 
 imagePullSecrets: []
 nameOverride: ""
@@ -70,6 +96,13 @@ resources: {}
   # requests:
 #   cpu: 100m
 #   memory: 128Mi
+
+readinessProbe:
+  failureThreshold: 3
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  successThreshold: 3
+  timeoutSeconds: 5
 
 nodeSelector: {}
 

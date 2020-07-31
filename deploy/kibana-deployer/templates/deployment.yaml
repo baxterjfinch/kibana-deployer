@@ -28,14 +28,37 @@ spec:
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           env:
-            - name: ELASTICSEARCH_HOSTS
-              value: {{ .Values.elasticsearchURL }}
-            - name: SERVER_HOST
-              value: "{{ .Values.serverHost }}"
-            - name: PROJECT_ID
-              value: {{ .Values.application.project_id }}
-            - name: GOOGLE_APPLICATION_CREDENTIALS
-              value: {{ .Values.application.credentials }}
+            {{- toYaml .Values.application.environment | nindent 12 }}
+          readinessProbe:
+            failureThreshold: 3
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            successThreshold: 3
+            timeoutSeconds: 5
+            exec:
+              command:
+                - sh
+                - -c
+                - |
+                  #!/usr/bin/env bash -e
+                  http () {
+                      local path="${1}"
+                      set -- -XGET -s --fail -L
+
+                      if [ -n "${ELASTICSEARCH_USERNAME}" ] && [ -n "${ELASTICSEARCH_PASSWORD}" ]; then
+                        set -- "$@" -u "${ELASTICSEARCH_USERNAME}:${ELASTICSEARCH_PASSWORD}"
+                      fi
+
+                      STATUS=$(curl --output /dev/null --write-out "%{http_code}" -k "$@" "{{ .Values.protocol }}://localhost:{{ .Values.httpPort }}${path}")
+                      if [[ "${STATUS}" -eq 200 ]]; then
+                        exit 0
+                      fi
+
+                      echo "Error: Got HTTP code ${STATUS} but expected a 200"
+                      exit 1
+                  }
+
+                  http "{{ .Values.healthCheckPath }}"
           ports:
             - name: http
               containerPort: {{ .Values.service.port }}
